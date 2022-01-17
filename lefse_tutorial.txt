@@ -1,0 +1,52 @@
+summarize_taxa.py \
+-i feature-table.biom \
+-o summarize_taxa_L6 \
+-m mapping_file.txt \
+--delimiter '|'
+
+---------------------------------------------------------------------------------------------
+
+qiime taxa collapse \
+  --i-table table-dada2.qza \
+  --i-taxonomy taxonomy.qza \
+  --o-collapsed-table collapse.table.qza \
+  --p-level 7 \
+  --output-dir collapse_frequency 
+  
+  
+qiime feature-table relative-frequency \
+  --i-table collapse.table.qza \
+  --o-relative-frequency-table collapse.frequency.table.qza \
+  --output-dir collapse.frequency
+
+###from collapse.frequency.table.qza export biom file###
+biom convert -i feature-table.biom -o lefse.txt --to-tsv
+
+
+format_input.py lefse.txt lefse.in -c 1 -s 2 -u 3 -o 1000000
+
+###if get error like this:
+
+###Traceback (most recent call last):
+###  File "/home/serdem/miniconda3/envs/py27/bin/format_input.py", line 448, in <module>
+###    class_sl,subclass_sl,class_hierarchy = get_class_slices(zip(*cls.values()))
+###  File "/home/serdem/miniconda3/envs/py27/bin/format_input.py", line 162, in get_class_slices
+###    previous_class = data[0][0]
+###IndexError: list index out of range
+
+### delete line starting "#"
+
+
+
+run_lefse.py lefse.in lefse.res
+
+###If there are no subclasses add "--wilc 0" to run_lefse.py to skip Wilcoxon test 
+
+
+***************Plotting*********************
+
+plot_res.py lefse.res lefse.png
+
+
+plot_cladogram.py lefse.res lefse_cladogram.png --format png
+

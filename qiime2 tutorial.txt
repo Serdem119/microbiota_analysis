@@ -1,0 +1,119 @@
+###QIIME2 TUTORIAL##
+###
+
+
+##importing data w/ manifest
+
+
+##qiime tools view demux.qzv
+
+/mnt/d/ubuntu_files/
+
+conda install q2-picrust2=2019.10 -c conda-forge -c bioconda -c gavinmdouglas
+
+qiime tools import \
+  --type 'SampleData[PairedEndSequencesWithQuality]' \
+  --input-path sample-manifest.txt \
+  --output-path paired-end-demux.qza \
+  --input-format PairedEndFastqManifestPhred33V2
+
+##Visualize data
+qiime demux summarize \
+  --i-data paired-end-demux.qza \
+  --o-visualization paired-end-demux.qzv
+
+
+##DADA2 Q. control
+qiime dada2 denoise-single\
+  --i-demultiplexed-seqs paired-end-demux.qza \
+  --p-trim-left 30 \
+  --p-trunc-len 180 \
+  --o-representative-sequences rep-seqs-dada2.qza \
+  --o-table table-dada2.qza \
+  --o-denoising-stats stats-dada2.qza
+
+##DADA2 visualize
+qiime metadata tabulate \
+  --m-input-file stats-dada2.qza \
+  --o-visualization stats-dada2.qzv
+  
+##FeatureTable && FeatureData
+qiime feature-table summarize \
+  --i-table table-dada2.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file metadata.csv
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs-dada2.qza \
+  --o-visualization rep-seqs.qzv
+  
+##Phylogeny Tree && analyses
+qiime phylogeny align-to-tree-mafft-fasttree \
+  --i-sequences rep-seqs-dada2.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza  
+
+
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table-dada2.qza \
+  --p-sampling-depth 77000 \
+  --m-metadata-file metadata.csv \
+  --output-dir core-metrics-results
+  
+  
+  
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/faith_pd_vector.qza \
+  --m-metadata-file metadata.csv \
+  --o-visualization core-metrics-results/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/evenness_vector.qza \
+  --m-metadata-file metadata.csv \
+  --o-visualization core-metrics-results/evenness-group-significance.qzv
+  
+  
+  
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/unweighted_unifrac_distance_matrix.qza \
+  --m-metadata-file metadata.csv \
+  --m-metadata-column NO/NN_ON/OO_Meconium \
+  --o-visualization core-metrics-results/unweighted-unifrac-Meconium-significance.qzv \
+  --p-pairwise
+
+qiime diversity beta-group-significance \
+  --i-distance-matrix core-metrics-results/unweighted_unifrac_distance_matrix.qza \
+  --m-metadata-file metadata.csv \
+  --m-metadata-column ON_OO_Stool \
+  --o-visualization core-metrics-results/unweighted-unifrac-ON_OO_Stool-group-significance.qzv \
+  --p-pairwise
+  
+  
+  
+##Alpha rarefunction 
+qiime diversity alpha-rarefaction \
+  --i-table table-dada2.qza \
+  --i-phylogeny rooted-tree.qza \
+  --p-max-depth 80000 \
+  --m-metadata-file metadata.csv \
+  --o-visualization alpha-rarefaction.qzv
+
+
+qiime feature-classifier classify-sklearn \
+  --i-classifier silva-138-99-nb-classifier.qza \
+  --i-reads rep-seqs-dada2.qza \
+  --o-classification taxonomy.qza
+
+qiime metadata tax \
+  --m-input-file taxonomy.qza \
+  --o-visualization taxonomy.qzv
+
+qiime taxa barplot \
+  --i-table table-dada2.qza \
+  --i-taxonomy taxonomy.qza \
+  --m-metadata-file metadata.csv \
+  --o-visualization taxa-bar-plots.qzv
+
+
